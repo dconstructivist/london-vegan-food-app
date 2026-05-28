@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
         
         :root {
             --bg-primary: #fdfbf7;
@@ -77,29 +77,49 @@
             background-color: rgba(214, 140, 113, 0.1);
             color: var(--accent-terracotta);
         }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen">
 
     <nav class="glass-nav sticky top-0 z-50 px-6 py-4">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <h1 class="text-2xl font-bold tracking-tight">Vegan<span style="color: var(--accent-terracotta)">Explorer</span></h1>
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <h1 class="text-2xl font-bold tracking-tight">Vegan<span style="color: var(--accent-terracotta)">Explorer</span></h1>
+                <button onclick="toggleSettingsModal()" class="md:hidden p-2 rounded-full hover:bg-stone-100 transition" title="API Key Settings">
+                    ⚙️
+                </button>
+            </div>
             
-            <div class="flex gap-8 text-sm font-bold text-gray-400 uppercase tracking-widest">
+            <div class="flex gap-6 md:gap-8 text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest">
                 <button onclick="setView('discover')" id="tab-discover" class="tab-btn active pb-1">Discover</button>
+                <button onclick="setView('ai')" id="tab-ai" class="tab-btn pb-1 flex items-center gap-1.5">🔮 Ask AI</button>
                 <button onclick="setView('insights')" id="tab-insights" class="tab-btn pb-1">Insights</button>
             </div>
 
-            <div class="flex gap-2 p-1 bg-gray-100 rounded-full">
-                <button onclick="setCity('All')" id="city-all" class="city-btn active px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">All</button>
-                <button onclick="setCity('London')" id="city-london" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">London</button>
-                <button onclick="setCity('Brighton')" id="city-brighton" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">Brighton</button>
+            <div class="flex items-center gap-4">
+                <div class="flex gap-2 p-1 bg-gray-100 rounded-full">
+                    <button onclick="setCity('All')" id="city-all" class="city-btn active px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">All</button>
+                    <button onclick="setCity('London')" id="city-london" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">London</button>
+                    <button onclick="setCity('Brighton')" id="city-brighton" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">Brighton</button>
+                </div>
+                <button onclick="toggleSettingsModal()" class="hidden md:block p-2.5 rounded-full hover:bg-stone-100 transition" title="API Key Settings">
+                    ⚙️
+                </button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 py-8">
         
+        <!-- Discover Tab View -->
         <div id="view-discover">
             <header class="mb-10 flex flex-col md:flex-row justify-between items-end gap-6">
                 <div>
@@ -113,7 +133,7 @@
 
             <section class="mb-10 flex flex-col md:flex-row gap-4">
                 <div class="flex-1 relative">
-                    <input type="text" id="searchInput" placeholder="Search cuisine, area, or name..." 
+                    <input type="text" id="searchInput" placeholder="Search cuisine, neighborhood, name or keywords (e.g. 'Asian')..." 
                            class="w-full pl-12 pr-4 py-4 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-sage-400 outline-none transition bg-white shadow-sm"
                            oninput="handleFilterChange()">
                     <span class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
@@ -137,6 +157,59 @@
             <div id="restaurantGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
         </div>
 
+        <!-- AI Companion Tab View -->
+        <div id="view-ai" class="hidden-tab">
+            <header class="mb-8">
+                <h2 class="text-3xl font-black mb-2">🔮 AI Travel Companion</h2>
+                <p class="text-gray-500 max-w-xl">Ask any culinary question using natural language. Gemini will analyze the entire guide and serve up tailored answers.</p>
+            </header>
+
+            <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm mb-10">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="aiInput" placeholder="Try: 'Spicy dinner options in Brighton that don't need a booking' or 'Cozy breakfast in Shoreditch'..." 
+                           class="flex-1 px-6 py-5 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-sage-400 outline-none transition bg-gray-50 font-medium"
+                           onkeydown="if(event.key === 'Enter') queryAI()">
+                    <button onclick="queryAI()" class="btn-action px-8 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm whitespace-nowrap">
+                        Ask Companion
+                    </button>
+                </div>
+
+                <!-- Suggested Quick Prompts -->
+                <div class="mt-4 flex flex-wrap gap-2 items-center">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Quick Prompts:</span>
+                    <button onclick="fillAndQuery('Best places for a sweet treats or bakeries in Shoreditch')" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition font-medium">🍩 Shoreditch Sweets</button>
+                    <button onclick="fillAndQuery('Healthy high-value lunch options in Brighton & Hove')" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition font-medium">🥗 Brighton Healthy Lunch</button>
+                    <button onclick="fillAndQuery('Highly rated authentic Asian flavors')" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-lg transition font-medium">🍜 Authentic Asian</button>
+                </div>
+            </div>
+
+            <!-- AI Output Panel -->
+            <div id="aiOutputContainer" class="hidden bg-emerald-50/50 rounded-[2rem] p-8 border border-emerald-100 mb-10 transition-all">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-2xl">✨</span>
+                    <h3 class="text-lg font-bold text-emerald-900">Companion's Recommendation</h3>
+                </div>
+                <p id="aiExplanation" class="text-stone-700 leading-relaxed text-base font-medium mb-4"></p>
+                <div class="flex justify-between items-center text-xs text-emerald-700 font-bold uppercase tracking-wider pt-4 border-t border-emerald-100">
+                    <span>Filtering list below based on recommendations</span>
+                    <button onclick="clearAISearch()" class="text-stone-500 hover:text-stone-800 transition">Reset Filter ✕</button>
+                </div>
+            </div>
+
+            <!-- Loader -->
+            <div id="aiLoader" class="hidden flex flex-col items-center justify-center py-12 gap-4">
+                <div class="w-12 h-12 border-4 border-dashed border-emerald-500 rounded-full animate-spin"></div>
+                <p class="text-sm font-semibold text-stone-500 animate-pulse-soft">Gemini is curating your personalized guide...</p>
+            </div>
+
+            <!-- Filtered AI Grid -->
+            <div>
+                <h3 id="aiGridTitle" class="text-xl font-bold mb-6">AI Matched Destinations</h3>
+                <div id="aiRestaurantGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+            </div>
+        </div>
+
+        <!-- Insights Tab View -->
         <div id="view-insights" class="hidden-tab">
             <header class="mb-12">
                 <h2 class="text-3xl font-black mb-2">Market Insights</h2>
@@ -191,46 +264,69 @@
 
     </main>
 
+    <!-- Custom Modal for API Settings -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-stone-100">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                ⚙️ API Configuration
+            </h3>
+            <p class="text-xs text-stone-500 leading-relaxed mb-6">
+                Inside Canvas, the AI runs completely free and automatically. If you host this elsewhere (e.g. GitHub Pages), you can get a free key from Google AI Studio and enter it below to keep the AI companion operational.
+            </p>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-stone-400 mb-1.5">Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" placeholder="Leave empty for automatic Canvas runtime" 
+                           class="w-full px-4 py-3 bg-stone-50 rounded-xl outline-none ring-1 ring-stone-200 focus:ring-2 focus:ring-emerald-400 text-sm font-mono">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="saveSettings()" class="btn-action flex-1 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider">Save Config</button>
+                <button onclick="toggleSettingsModal()" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const restaurants = [
-            { name: "Club Mexicana", city: "London", area: "Shoreditch", address: "Boxpark Shoreditch, E1 6GY", notes: "Vibrant Mexican street food. Famous for 'Cheezeburger' tacos.", price: "$", res: "No", rating: 4.6, lat: 51.5235, lng: -0.0758 },
-            { name: "Dauns", city: "London", area: "Spitalfields", address: "77 Wentworth Street, E1 7TD", notes: "Unbelievable vegan Swedish meatballs and fresh cinnamon buns.", price: "$$", res: "No", rating: 4.9, lat: 51.5173, lng: -0.0728 },
-            { name: "Gecko Coffeehouse", city: "London", area: "Bethnal Green", address: "49 Bethnal Green Road, E1 6LA", notes: "Superb specialty lattes and protein pancakes.", price: "$$", res: "No", rating: 4.8, lat: 51.5237, lng: -0.0722 },
-            { name: "Holy Carrot", city: "London", area: "Spitalfields", address: "61-63 Brushfield Street, E1 6AA", notes: "Chic bistro. Incredible pizzettas with fermented koji base.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5195, lng: -0.0772 },
-            { name: "King CookDaily", city: "London", area: "Liverpool Street", address: "Boxhall, EC2M 7PN", notes: "Iconic plant-based bowls. The 'High Grade' is legendary.", price: "$$", res: "No", rating: 4.5, lat: 51.5178, lng: -0.0820 },
-            { name: "Love Shack", city: "London", area: "Bethnal Green", address: "298 Cambridge Heath Rd, E2 9HA", notes: "Quirky railway-arch cafe. Amazing mushroom risotto.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5303, lng: -0.0573 },
-            { name: "Mallow", city: "London", area: "Borough Market", address: "1 Cathedral Street, SE1 9DE", notes: "Beautiful globally inspired dishes next to the historic market.", price: "$$$", res: "Yes", rating: 4.5, lat: 51.5061, lng: -0.0908 },
-            { name: "Meat The Vegans", city: "London", area: "Camden", address: "Camden Stables Market, NW1 8AH", notes: "Global menu featuring curries, burritos, and jerk chicken.", price: "$$", res: "No", rating: 4.8, lat: 51.5414, lng: -0.1456 },
-            { name: "Merkamo Vegan", city: "London", area: "Spitalfields Market", address: "Old Spitalfields Market, E1 6EW", notes: "Incredible Ethiopian variety boxes with injera bread.", price: "$", res: "No", rating: 4.7, lat: 51.5198, lng: -0.0759 },
-            { name: "Mildreds", city: "London", area: "Soho", address: "45 Lexington Street, W1F 9AN", notes: "The landmark pioneer of London's meat-free scene.", price: "$$", res: "Yes", rating: 4.5, lat: 51.5126, lng: -0.1377 },
-            { name: "MukBap", city: "London", area: "Shoreditch", address: "91 Worship St, EC2A 2BG", notes: "Family-run Korean. Phenomenal Tteokbokki and pancakes.", price: "$$", res: "No", rating: 4.7, lat: 51.5208, lng: -0.0827 },
-            { name: "Okja", city: "London", area: "Spitalfields", address: "29 Toynbee Street, E1 7NE", notes: "Bakes everything on-site with custom plant butter.", price: "$$", res: "No", rating: 4.6, lat: 51.5175, lng: -0.0732 },
-            { name: "Oliveira Kitchen", city: "London", area: "Shoreditch", address: "80 Paul St, EC2A 4NE", notes: "Elegant, organic dishes. Famous wild mushroom faux gras.", price: "$$$", res: "Yes", rating: 4.7, lat: 51.5244, lng: -0.0844 },
-            { name: "Palm Greens & Soul", city: "London", area: "Shoreditch", address: "114 Cheshire St, E2 6EJ", notes: "Nutrient-dense salad bowls inside a co-working space.", price: "$$", res: "No", rating: 4.5, lat: 51.5248, lng: -0.0682 },
-            { name: "Plant Shack", city: "London", area: "Shoreditch", address: "52 Great Eastern St, EC2A 3EP", notes: "Great specialty coffee and energy bowls.", price: "$$", res: "No", rating: 4.8, lat: 51.5255, lng: -0.0818 },
-            { name: "Plates", city: "London", area: "Shoreditch", address: "320 Old Street, EC1V 9DR", notes: "12-course Chef's Counter. Completely organic.", price: "$$$$", res: "Yes", rating: 4.8, lat: 51.5268, lng: -0.0850 },
-            { name: "Purezza Camden", city: "London", area: "Camden", address: "45-47 Parkway, NW1 7PN", notes: "Award-winning sourdough. Huge space and dog friendly.", price: "$$$", res: "Yes", rating: 4.8, lat: 51.5379, lng: -0.1448 },
-            { name: "Rawlala", city: "London", area: "Shoreditch", address: "11 Hackney Road, E2 7NX", notes: "Organic, GF, raw cakes and acai bowls.", price: "$$", res: "No", rating: 4.5, lat: 51.5268, lng: -0.0768 },
-            { name: "Sen Viet Vegan", city: "London", area: "Haggerston", address: "120 Kingsland Rd, E2 8DP", notes: "Highly authentic 100% vegan Pho and claypots.", price: "$$", res: "No", rating: 4.8, lat: 51.5323, lng: -0.0762 },
-            { name: "Temple of Seitan", city: "London", area: "Hackney", address: "10 Westgate Street, E8 3RN", notes: "Legendary seitan-based fried chicken and wings.", price: "$", res: "No", rating: 4.4, lat: 51.5393, lng: -0.0594 },
-            { name: "The Gallery Café", city: "London", area: "Bethnal Green", address: "21 Old Ford Road, E2 9PL", notes: "Charity-run with a beautiful peaceful garden space.", price: "$$", res: "No", rating: 4.5, lat: 51.5285, lng: -0.0550 },
-            { name: "The Spread Eagle", city: "London", area: "Homerton", address: "224 Homerton High Street, E9 6AS", notes: "London’s first 100% vegan pub. Famous roasts.", price: "$$", res: "Yes", rating: 4.7, lat: 51.5471, lng: -0.0402 },
-            { name: "The Veg Box Cafe", city: "London", area: "Marylebone", address: "136 Marylebone Road, NW1 5PH", notes: "Local farm sourcing and fluffy pancakes.", price: "$$", res: "Yes", rating: 4.9, lat: 51.5225, lng: -0.1558 },
-            { name: "Tofu Vegan", city: "London", area: "Spitalfields", address: "54 Commercial Street, E1 6LT", notes: "Masterful Sichuan Chinese mushroom dishes.", price: "$$", res: "Yes", rating: 4.8, lat: 51.5175, lng: -0.0732 },
-            { name: "Unity Diner", city: "London", area: "Spitalfields", address: "60 Wentworth Street, E1 7AL", notes: "Founded by Earthling Ed. Famous Tofish and chips.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5173, lng: -0.0732 },
-            { name: "Vegan Yes", city: "London", area: "Shoreditch", address: "64 Brick Lane, E1 6RF", notes: "Unique Italian-Korean fusion. Try the kimchi lasagna.", price: "$$", res: "No", rating: 4.8, lat: 51.5204, lng: -0.0718 },
-            { name: "WAVE", city: "London", area: "Hackney", address: "11 Dispensary Lane, E8 1FT", notes: "Bali-Beach vibe with hanging swing chairs.", price: "$$", res: "No", rating: 4.6, lat: 51.5484, lng: -0.0544 },
-            { name: "Abyssinia", city: "Brighton", area: "North Laine", address: "29 Baker St, BN1 4JN", notes: "Hearty Ethiopian sharing platters. Cash only.", price: "$", res: "Yes", rating: 4.7, lat: 50.8305, lng: -0.1365 },
-            { name: "Beelzebab", city: "Brighton", area: "North Laine", address: "11-12 Queens Road, BN1 3WA", notes: "Inside Hope & Ruin pub. PB&J fries are legendary.", price: "$", res: "No", rating: 4.6, lat: 50.8262, lng: -0.1420 },
-            { name: "Bonsai", city: "Brighton", area: "North Laine", address: "44-45 Baker Street, BN1 4JN", notes: "Modern Asian small plates cooked on charcoal grill.", price: "$$$$", res: "Yes", rating: 4.9, lat: 50.8306, lng: -0.1362 },
-            { name: "Green Kitchen", city: "Brighton", area: "Brighton", address: "8 Preston Road, BN1 4BF", notes: "Incredible homemade bacon and seitan steaks.", price: "$", res: "No", rating: 4.7, lat: 50.8344, lng: -0.1388 },
-            { name: "Iydea", city: "Brighton", area: "North Laine", address: "17 Kensington Gardens, BN1 4AL", notes: "Healthy build-your-own plates. Great value.", price: "$", res: "No", rating: 4.6, lat: 50.8265, lng: -0.1396 },
-            { name: "No Catch", city: "Brighton", area: "Seafront", address: "127a King’s Road, BN1 2FA", notes: "Premium 100% vegan fish and chip shop.", price: "$$$", res: "No", rating: 4.7, lat: 50.8213, lng: -0.1442 },
-            { name: "Oowee", city: "Brighton", area: "The Lanes", address: "23 Market Street, BN1 1HH", notes: "Best vegan chicken and mac n cheese in town.", price: "$$", res: "No", rating: 4.5, lat: 50.8215, lng: -0.1402 },
-            { name: "Planet India", city: "Brighton", area: "Brighton", address: "4 Richmond Parade, BN2 9PH", notes: "Authentic, family-run Indian. Uniquely written menu.", price: "$$", res: "Yes", rating: 4.7, lat: 50.8285, lng: -0.1345 },
-            { name: "Purezza Brighton", city: "Brighton", area: "Kemptown", address: "12 St James's St, BN2 1RE", notes: "World-class sourdough pizza. Highly popular.", price: "$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1352 },
-            { name: "Terre a Terre", city: "Brighton", area: "The Lanes", address: "71 East Street, BN1 1HQ", notes: "Iconic high-end vegetarian sharing plates.", price: "$$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1398 },
-            { name: "The Roundhill", city: "Brighton", area: "Brighton", address: "100 Ditchling Road, BN1 4SG", notes: "Award-winning roasts in a spacious pub setting.", price: "$$$", res: "Yes", rating: 4.7, lat: 50.8354, lng: -0.1332 }
+            { name: "Club Mexicana", city: "London", area: "Shoreditch", address: "Boxpark Shoreditch, E1 6GY", notes: "Vibrant Mexican street food. Famous for 'Cheezeburger' tacos.", price: "$", res: "No", rating: 4.6, lat: 51.5235, lng: -0.0758, tags: ["Mexican", "Street Food", "Tacos", "North American"] },
+            { name: "Dauns", city: "London", area: "Spitalfields", address: "77 Wentworth Street, E1 7TD", notes: "Unbelievable vegan Swedish meatballs and fresh cinnamon buns.", price: "$$", res: "No", rating: 4.9, lat: 51.5173, lng: -0.0728, tags: ["Swedish", "Scandinavian", "Bakery", "European", "Cafe"] },
+            { name: "Gecko Coffeehouse", city: "London", area: "Bethnal Green", address: "49 Bethnal Green Road, E1 6LA", notes: "Superb specialty lattes and protein pancakes.", price: "$$", res: "No", rating: 4.8, lat: 51.5237, lng: -0.0722, tags: ["Coffee", "Bakery", "Breakfast", "Cafe", "Brunch"] },
+            { name: "Holy Carrot", city: "London", area: "Spitalfields", address: "61-63 Brushfield Street, E1 6AA", notes: "Chic bistro. Incredible pizzettas with fermented koji base.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5195, lng: -0.0772, tags: ["Bistro", "Pizza", "European", "Italian", "Modern"] },
+            { name: "King CookDaily", city: "London", area: "Liverpool Street", address: "Boxhall, EC2M 7PN", notes: "Iconic plant-based bowls. The 'High Grade' is legendary.", price: "$$", res: "No", rating: 4.5, lat: 51.5178, lng: -0.0820, tags: ["Thai", "Lao", "Asian", "Bowls", "Street Food"] },
+            { name: "Love Shack", city: "London", area: "Bethnal Green", address: "298 Cambridge Heath Rd, E2 9HA", notes: "Quirky railway-arch cafe. Amazing mushroom risotto.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5303, lng: -0.0573, tags: ["Bar", "British", "Pub", "Mushroom", "Cozy"] },
+            { name: "Mallow", city: "London", area: "Borough Market", address: "1 Cathedral Street, SE1 9DE", notes: "Beautiful globally inspired dishes next to the historic market.", price: "$$$", res: "Yes", rating: 4.5, lat: 51.5061, lng: -0.0908, tags: ["Global", "Bistro", "Fusion", "Gourmet", "Creative"] },
+            { name: "Meat The Vegans", city: "London", area: "Camden", address: "Camden Stables Market, NW1 8AH", notes: "Global menu featuring curries, burritos, and jerk chicken.", price: "$$", res: "No", rating: 4.8, lat: 51.5414, lng: -0.1456, tags: ["Global", "Indian", "Mexican", "Caribbean", "Jerk", "Street Food"] },
+            { name: "Merkamo Vegan", city: "London", area: "Spitalfields Market", address: "Old Spitalfields Market, E1 6EW", notes: "Incredible Ethiopian variety boxes with injera bread.", price: "$", res: "No", rating: 4.7, lat: 51.5198, lng: -0.0759, tags: ["Ethiopian", "African", "Curry", "Healthy", "Fast Casual"] },
+            { name: "Mildreds", city: "London", area: "Soho", address: "45 Lexington Street, W1F 9AN", notes: "The landmark pioneer of London's meat-free scene.", price: "$$", res: "Yes", rating: 4.5, lat: 51.5126, lng: -0.1377, tags: ["Global", "Fusion", "Bistro", "Classic", "Established"] },
+            { name: "MukBap", city: "London", area: "Shoreditch", address: "91 Worship St, EC2A 2BG", notes: "Family-run Korean. Phenomenal Tteokbokki and pancakes.", price: "$$", res: "No", rating: 4.7, lat: 51.5208, lng: -0.0827, tags: ["Korean", "Asian", "Tteokbokki", "Spicy", "Authentic"] },
+            { name: "Okja", city: "London", area: "Spitalfields", address: "29 Toynbee Street, E1 7NE", notes: "Bakes everything on-site with custom plant butter.", price: "$$", res: "No", rating: 4.6, lat: 51.5175, lng: -0.0732, tags: ["Bakery", "Cafe", "Dessert", "Coffee", "Pastries"] },
+            { name: "Oliveira Kitchen", city: "London", area: "Shoreditch", address: "80 Paul St, EC2A 4NE", notes: "Elegant, organic dishes. Famous wild mushroom faux gras.", price: "$$$", res: "Yes", rating: 4.7, lat: 51.5244, lng: -0.0844, tags: ["Organic", "Brazilian", "Italian", "European", "Soy-Free", "Chef-Led"] },
+            { name: "Palm Greens & Soul", city: "London", area: "Shoreditch", address: "114 Cheshire St, E2 6EJ", notes: "Nutrient-dense salad bowls inside a co-working space.", price: "$$", res: "No", rating: 4.5, lat: 51.5248, lng: -0.0682, tags: ["Salad", "Healthy", "Bowls", "Mexican", "Light"] },
+            { name: "Plant Shack", city: "London", area: "Shoreditch", address: "52 Great Eastern St, EC2A 3EP", notes: "Great specialty coffee and energy bowls.", price: "$$", res: "No", rating: 4.8, lat: 51.5255, lng: -0.0818, tags: ["Cafe", "Coffee", "Breakfast", "Juices"] },
+            { name: "Plates", city: "London", area: "Shoreditch", address: "320 Old Street, EC1V 9DR", notes: "12-course Chef's Counter. Completely organic.", price: "$$$$", res: "Yes", rating: 4.8, lat: 51.5268, lng: -0.0850, tags: ["Fine Dining", "Organic", "Gourmet", "French", "Luxury"] },
+            { name: "Purezza Camden", city: "London", area: "Camden", address: "45-47 Parkway, NW1 7PN", notes: "Award-winning sourdough. Huge space and dog friendly.", price: "$$$", res: "Yes", rating: 4.8, lat: 51.5379, lng: -0.1448, tags: ["Pizza", "Italian", "Sourdough", "Comfort Food"] },
+            { name: "Rawlala", city: "London", area: "Shoreditch", address: "11 Hackney Road, E2 7NX", notes: "Organic, GF, raw cakes and acai bowls.", price: "$$", res: "No", rating: 4.5, lat: 51.5268, lng: -0.0768, tags: ["Cafe", "Bakery", "Organic", "Gluten-Free", "Dessert", "Raw"] },
+            { name: "Sen Viet Vegan", city: "London", area: "Haggerston", address: "120 Kingsland Rd, E2 8DP", notes: "Highly authentic 100% vegan Pho and claypots.", price: "$$", res: "No", rating: 4.8, lat: 51.5323, lng: -0.0762, tags: ["Vietnamese", "Asian", "Pho", "Soups", "Noodles"] },
+            { name: "Temple of Seitan", city: "London", area: "Hackney", address: "10 Westgate Street, E8 3RN", notes: "Legendary seitan-based fried chicken and wings.", price: "$", res: "No", rating: 4.4, lat: 51.5393, lng: -0.0594, tags: ["Fast Food", "Comfort Food", "American", "Fried Chicken", "Seitan"] },
+            { name: "The Gallery Café", city: "London", area: "Bethnal Green", address: "21 Old Ford Road, E2 9PL", notes: "Charity-run with a beautiful peaceful garden space.", price: "$$", res: "No", rating: 4.5, lat: 51.5285, lng: -0.0550, tags: ["Cafe", "Breakfast", "British", "Garden", "Community"] },
+            { name: "The Spread Eagle", city: "London", area: "Homerton", address: "224 Homerton High Street, E9 6AS", notes: "London’s first 100% vegan pub. Famous roasts.", price: "$$", res: "Yes", rating: 4.7, lat: 51.5471, lng: -0.0402, tags: ["Pub", "British", "Sunday Roast", "Classic"] },
+            { name: "The Veg Box Cafe", city: "London", area: "Marylebone", address: "136 Marylebone Road, NW1 5PH", notes: "Local farm sourcing and fluffy pancakes.", price: "$$", res: "Yes", rating: 4.9, lat: 51.5225, lng: -0.1558, tags: ["Cafe", "Breakfast", "Asian", "Bao", "Organic"] },
+            { name: "Tofu Vegan", city: "London", area: "Spitalfields", address: "54 Commercial Street, E1 6LT", notes: "Masterful Sichuan Chinese mushroom dishes.", price: "$$", res: "Yes", rating: 4.8, lat: 51.5175, lng: -0.0732, tags: ["Sichuan", "Chinese", "Asian", "Tofu", "Spicy", "Authentic"] },
+            { name: "Unity Diner", city: "London", area: "Spitalfields", address: "60 Wentworth Street, E1 7AL", notes: "Founded by Earthling Ed. Famous Tofish and chips.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5173, lng: -0.0732, tags: ["Comfort Food", "Fast Food", "British", "Diner", "Cocktails"] },
+            { name: "Vegan Yes", city: "London", area: "Shoreditch", address: "64 Brick Lane, E1 6RF", notes: "Unique Italian-Korean fusion. Try the kimchi lasagna.", price: "$$", res: "No", rating: 4.8, lat: 51.5204, lng: -0.0718, tags: ["Italian", "Korean", "Fusion", "Asian", "Kimchi", "Unique"] },
+            { name: "WAVE", city: "London", area: "Hackney", address: "11 Dispensary Lane, E8 1FT", notes: "Bali-Beach vibe with hanging swing chairs.", price: "$$", res: "No", rating: 4.6, lat: 51.5484, lng: -0.0544, tags: ["Cafe", "Bakery", "Breakfast", "Pancakes", "Tropical"] },
+            { name: "Abyssinia", city: "Brighton", area: "North Laine", address: "29 Baker St, BN1 4JN", notes: "Hearty Ethiopian sharing platters. Cash only.", price: "$", res: "Yes", rating: 4.7, lat: 50.8305, lng: -0.1365, tags: ["Ethiopian", "African", "Sharing Platter", "Hearty"] },
+            { name: "Beelzebab", city: "Brighton", area: "North Laine", address: "11-12 Queens Road, BN1 3WA", notes: "Inside Hope & Ruin pub. PB&J fries are legendary.", price: "$", res: "No", rating: 4.6, lat: 50.8262, lng: -0.1420, tags: ["Fast Food", "Junk Food", "Kebab", "German", "Pub Food"] },
+            { name: "Bonsai", city: "Brighton", area: "North Laine", address: "44-45 Baker Street, BN1 4JN", notes: "Modern Asian small plates cooked on charcoal grill.", price: "$$$$", res: "Yes", rating: 4.9, lat: 50.8306, lng: -0.1362, tags: ["Asian", "Japanese", "Small Plates", "Charcoal", "Modern"] },
+            { name: "Green Kitchen", city: "Brighton", area: "Brighton", address: "8 Preston Road, BN1 4BF", notes: "Incredible homemade bacon and seitan steaks.", price: "$", res: "No", rating: 4.7, lat: 50.8344, lng: -0.1388, tags: ["Breakfast", "Cafe", "British", "Seitan", "Comfort Food"] },
+            { name: "Iydea", city: "Brighton", area: "North Laine", address: "17 Kensington Gardens, BN1 4AL", notes: "Healthy build-your-own plates. Great value.", price: "$", res: "No", rating: 4.6, lat: 50.8265, lng: -0.1396, tags: ["Vegetarian", "Healthy", "Buffet", "Salads", "Value"] },
+            { name: "No Catch", city: "Brighton", area: "Seafront", address: "127a King’s Road, BN1 2FA", notes: "Premium 100% vegan fish and chip shop.", price: "$$$", res: "No", rating: 4.7, lat: 50.8213, lng: -0.1442, tags: ["Seafood", "British", "Fast Food", "Fish and Chips", "Coastal"] },
+            { name: "Oowee", city: "Brighton", area: "The Lanes", address: "23 Market Street, BN1 1HH", notes: "Best vegan chicken and mac n cheese in town.", price: "$$", res: "No", rating: 4.5, lat: 50.8215, lng: -0.1402, tags: ["Fast Food", "American", "Fried Chicken", "Comfort Food", "Burgers"] },
+            { name: "Planet India", city: "Brighton", area: "Brighton", address: "4 Richmond Parade, BN2 9PH", notes: "Authentic, family-run Indian. Uniquely written menu.", price: "$$", res: "Yes", rating: 4.7, lat: 50.8285, lng: -0.1345, tags: ["Indian", "Curry", "Asian", "Authentic", "Family-Run"] },
+            { name: "Purezza Brighton", city: "Brighton", area: "Kemptown", address: "12 St James's St, BN2 1RE", notes: "World-class sourdough pizza. Highly popular.", price: "$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1352, tags: ["Pizza", "Italian", "Sourdough", "Comfort Food", "Famous"] },
+            { name: "Terre a Terre", city: "Brighton", area: "The Lanes", address: "71 East Street, BN1 1HQ", notes: "Iconic high-end vegetarian sharing plates.", price: "$$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1398, tags: ["Vegetarian", "Fusion", "Tapas", "Sharing Plates", "High-End"] },
+            { name: "The Roundhill", city: "Brighton", area: "Brighton", address: "100 Ditchling Road, BN1 4SG", notes: "Award-winning roasts in a spacious pub setting.", price: "$$$", res: "Yes", rating: 4.7, lat: 50.8354, lng: -0.1332, tags: ["Pub", "British", "Sunday Roast", "Spacious", "Award-Winning"] }
         ];
 
         let state = {
@@ -240,12 +336,15 @@
             price: 'All',
             reservation: 'All',
             userCoords: null,
-            locationActive: false
+            locationActive: false,
+            aiFilteredNames: null,
+            apiKey: localStorage.getItem('gemini_api_key') || ''
         };
 
         let charts = { price: null, rating: null };
 
         function init() {
+            document.getElementById('apiKeyInput').value = state.apiKey;
             renderGrid();
             updateStats();
         }
@@ -255,11 +354,17 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${view}`).classList.add('active');
             
+            document.getElementById('view-discover').classList.add('hidden-tab');
+            document.getElementById('view-ai').classList.add('hidden-tab');
+            document.getElementById('view-insights').classList.add('hidden-tab');
+
             if(view === 'discover') {
                 document.getElementById('view-discover').classList.remove('hidden-tab');
-                document.getElementById('view-insights').classList.add('hidden-tab');
+                renderGrid();
+            } else if (view === 'ai') {
+                document.getElementById('view-ai').classList.remove('hidden-tab');
+                renderAIGrid();
             } else {
-                document.getElementById('view-discover').classList.add('hidden-tab');
                 document.getElementById('view-insights').classList.remove('hidden-tab');
                 renderCharts();
             }
@@ -268,7 +373,8 @@
         function setCity(city) {
             state.city = city;
             document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`city-${city.toLowerCase()}`).classList.add('active');
+            const cBtn = document.getElementById(`city-${city.toLowerCase()}`);
+            if(cBtn) cBtn.classList.add('active');
             handleFilterChange();
         }
 
@@ -280,11 +386,30 @@
             if(state.view === 'insights') renderCharts();
         }
 
+        function showNotification(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-xl border text-sm font-semibold transition-all duration-300 transform translate-y-10 opacity-0 ${
+                isError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`;
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
         function toggleLocation() {
             if (!state.locationActive) {
-                // FALLBACK CHECK: Browsers block location on local files (file://) or insecure sites.
                 if (!window.isSecureContext && window.location.protocol !== 'file:') {
-                    alert("Location access requires a secure (HTTPS) connection. If you are using a local file, Chrome might block this for security.");
+                    showNotification("Secure context (HTTPS) is required to access device location.", true);
                 }
 
                 if (navigator.geolocation) {
@@ -294,12 +419,14 @@
                         document.getElementById('locText').innerText = "Proximity Sort Active";
                         document.getElementById('locationBtn').classList.add('bg-emerald-50', 'border-emerald-200');
                         renderGrid();
+                        renderAIGrid();
+                        showNotification("Live location loaded. Nearest options sorted to top.");
                     }, err => {
-                        let msg = "Location access denied. ";
+                        let msg = "Location access denied. Ensure browser permissions are enabled.";
                         if(window.location.protocol === 'file:') {
-                            msg += "\n\nTip: You are opening this as a local file. Chrome often blocks location for local files. Try clicking the 'lock' or 'info' icon in the address bar and set Location to 'Allow'.";
+                            msg += " Since you are running this locally via file://, Chrome blocks geolocation. Consider hosting on GitHub Pages!";
                         }
-                        alert(msg);
+                        showNotification(msg, true);
                     });
                 }
             } else {
@@ -308,6 +435,8 @@
                 document.getElementById('locText').innerText = "Enable Proximity Sorting";
                 document.getElementById('locationBtn').classList.remove('bg-emerald-50', 'border-emerald-200');
                 renderGrid();
+                renderAIGrid();
+                showNotification("Proximity sorting deactivated.");
             }
         }
 
@@ -323,12 +452,14 @@
 
         function renderGrid() {
             const grid = document.getElementById('restaurantGrid');
+            if (!grid) return;
+
             let data = restaurants.filter(r => {
                 const cityMatch = state.city === 'All' || r.city === state.city;
-                const searchMatch = r.name.toLowerCase().includes(state.search) || 
-                                    r.notes.toLowerCase().includes(state.search) ||
-                                    r.area.toLowerCase().includes(state.search) ||
-                                    r.address.toLowerCase().includes(state.search);
+                const textTarget = `${r.name} ${r.notes} ${r.area} ${r.address}`.toLowerCase();
+                const textMatch = textTarget.includes(state.search);
+                const tagsMatch = r.tags && r.tags.some(tag => tag.toLowerCase().includes(state.search));
+                const searchMatch = textMatch || tagsMatch;
                 const priceMatch = state.price === 'All' || r.price === state.price;
                 const resMatch = state.reservation === 'All' || r.res === state.reservation;
                 return cityMatch && searchMatch && priceMatch && resMatch;
@@ -337,12 +468,29 @@
             if (state.locationActive && state.userCoords) {
                 data.forEach(r => r.distance = calcDist(state.userCoords.lat, state.userCoords.lng, r.lat, r.lng));
                 data.sort((a, b) => a.distance - b.distance);
+            } else {
+                data.forEach(r => delete r.distance);
             }
 
-            grid.innerHTML = data.map(r => {
+            grid.innerHTML = generateGridMarkup(data);
+        }
+
+        function generateGridMarkup(data) {
+            if(data.length === 0) {
+                return `
+                <div class="col-span-full text-center py-16 bg-white rounded-[2rem] border border-dashed border-stone-200">
+                    <p class="text-stone-400 font-bold text-lg mb-2">No venues match the current criteria.</p>
+                    <p class="text-xs text-stone-400">Try loosening your search terms or filters.</p>
+                </div>`;
+            }
+
+            return data.map(r => {
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name + ' ' + r.address)}`;
                 const distMarkup = r.distance ? `<span class="location-badge px-3 py-1 rounded-full text-[10px] font-bold">📍 ${r.distance.toFixed(1)} km away</span>` : '';
-                
+                const tagBadges = r.tags ? r.tags.slice(0, 3).map(t => 
+                    `<span class="px-2 py-0.5 bg-stone-100 text-stone-500 rounded-md text-[9px] font-semibold">${t}</span>`
+                ).join('') : '';
+
                 return `
                 <div class="bg-white rounded-[2rem] p-8 border border-gray-100 card-hover flex flex-col">
                     <div class="flex justify-between items-start mb-6">
@@ -350,7 +498,9 @@
                         ${distMarkup}
                     </div>
                     
-                    <h4 class="text-2xl font-bold text-stone-900 mb-2">${r.name}</h4>
+                    <h4 class="text-2xl font-bold text-stone-900 mb-1">${r.name}</h4>
+                    <div class="flex flex-wrap gap-1 mb-5">${tagBadges}</div>
+
                     <div class="flex items-center gap-2 mb-6">
                         <span class="text-xs font-bold text-amber-500">★ ${r.rating}</span>
                         <span class="h-1 w-1 bg-gray-300 rounded-full"></span>
@@ -372,6 +522,152 @@
             }).join('');
         }
 
+        async function queryAI() {
+            const query = document.getElementById('aiInput').value.trim();
+            if(!query) {
+                showNotification("Please enter an exploration scenario first.", true);
+                return;
+            }
+
+            // Show loading indicators
+            document.getElementById('aiLoader').classList.remove('hidden');
+            document.getElementById('aiOutputContainer').classList.add('hidden');
+            document.getElementById('aiRestaurantGrid').innerHTML = '';
+
+            // Retrieve local key or leave as empty string for canvas automatic environment integration
+            const apiKey = state.apiKey || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemInstruction = `You are a culinary AI travel assistant specialized in the vegan restaurant landscape of London & Brighton. 
+Analyze the provided restaurant dataset containing 39 detailed listings. Based on the user's request, identify the matching locations that best fit their description semantically. 
+Return a JSON structured response with the listed matching names exactly as they appear in the database, alongside a friendly, structured 2-sentence explanation of why these match.`;
+
+            // Prepare streamlined metadata payload to preserve token bandwidth
+            const simplifiedData = restaurants.map(r => ({
+                name: r.name,
+                city: r.city,
+                area: r.area,
+                notes: r.notes,
+                price: r.price,
+                res: r.res,
+                rating: r.rating,
+                tags: r.tags
+            }));
+
+            const userPrompt = `User Request: "${query}"\n\nDatabase:\n${JSON.stringify(simplifiedData)}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            matchedNames: {
+                                type: "ARRAY",
+                                items: { type: "STRING" }
+                            },
+                            explanation: {
+                                type: "STRING",
+                                description: "A concise, enthusiastic 2-sentence breakdown explaining why these recommendations are suited for the request."
+                            }
+                        },
+                        required: ["matchedNames", "explanation"]
+                    }
+                },
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            // Implement basic exponential backoff
+            let delay = 1000;
+            const maxRetries = 3;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && attempt < maxRetries) {
+                            await new Promise(res => setTimeout(res, delay));
+                            delay *= 2;
+                            continue;
+                        }
+                        throw new Error(`API Status Code: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        const parsed = JSON.parse(candidate.content.parts[0].text);
+                        handleAIResponse(parsed);
+                        return;
+                    }
+                    throw new Error("Invalid response format received from model.");
+
+                } catch (err) {
+                    if (attempt === maxRetries) {
+                        document.getElementById('aiLoader').classList.add('hidden');
+                        showNotification("AI query failed. Ensure your Gemini API Key is configured.", true);
+                        console.error(err);
+                    }
+                }
+            }
+        }
+
+        function handleAIResponse(data) {
+            document.getElementById('aiLoader').classList.add('hidden');
+            
+            const explanationPanel = document.getElementById('aiOutputContainer');
+            const explanationText = document.getElementById('aiExplanation');
+            
+            explanationText.innerText = data.explanation;
+            explanationPanel.classList.remove('hidden');
+
+            state.aiFilteredNames = data.matchedNames;
+            renderAIGrid();
+        }
+
+        function renderAIGrid() {
+            const grid = document.getElementById('aiRestaurantGrid');
+            const title = document.getElementById('aiGridTitle');
+            if (!grid) return;
+
+            let data = restaurants;
+
+            if (state.aiFilteredNames) {
+                // Keep only items semantic query matched
+                data = restaurants.filter(r => state.aiFilteredNames.includes(r.name));
+                title.innerText = `Matched ${data.length} Perfect Venues`;
+            } else {
+                title.innerText = "All Active Venues";
+            }
+
+            // Apply proximity sorting if active
+            if (state.locationActive && state.userCoords) {
+                data.forEach(r => r.distance = calcDist(state.userCoords.lat, state.userCoords.lng, r.lat, r.lng));
+                data.sort((a, b) => a.distance - b.distance);
+            } else {
+                data.forEach(r => delete r.distance);
+            }
+
+            grid.innerHTML = generateGridMarkup(data);
+        }
+
+        function fillAndQuery(text) {
+            document.getElementById('aiInput').value = text;
+            queryAI();
+        }
+
+        function clearAISearch() {
+            state.aiFilteredNames = null;
+            document.getElementById('aiOutputContainer').classList.add('hidden');
+            document.getElementById('aiInput').value = '';
+            renderAIGrid();
+        }
+
         function renderCharts() {
             const data = state.city === 'All' ? restaurants : restaurants.filter(r => r.city === state.city);
             const ctxP = document.getElementById('priceChart').getContext('2d');
@@ -386,7 +682,7 @@
                     labels: ['$', '$$', '$$$', '$$$$'],
                     datasets: [{
                         data: ['$', '$$', '$$$', '$$$$'].map(p => data.filter(r => r.price === p).length),
-                        backgroundColor: ['#f5f5f4', '#8da399', '#d68c71', '#2d2d2d'],
+                        backgroundColor: ['#e5e5e0', '#8da399', '#d68c71', '#2d2d2d'],
                         borderWidth: 0
                     }]
                 },
@@ -417,6 +713,19 @@
             document.getElementById('stat-walkin').innerText = restaurants.filter(r => r.res === 'No').length;
             document.getElementById('stat-fine').innerText = restaurants.filter(r => r.price === '$$$$').length;
             document.getElementById('stat-rating').innerText = (restaurants.reduce((a, b) => a + b.rating, 0) / restaurants.length).toFixed(1);
+        }
+
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveSettings() {
+            const val = document.getElementById('apiKeyInput').value.trim();
+            state.apiKey = val;
+            localStorage.setItem('gemini_api_key', val);
+            toggleSettingsModal();
+            showNotification("Configuration updated successfully.");
         }
 
         window.onload = init;
