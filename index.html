@@ -325,7 +325,10 @@
             const grid = document.getElementById('restaurantGrid');
             let data = restaurants.filter(r => {
                 const cityMatch = state.city === 'All' || r.city === state.city;
-                const searchMatch = r.name.toLowerCase().includes(state.search) || r.notes.toLowerCase().includes(state.search);
+                const searchMatch = r.name.toLowerCase().includes(state.search) || 
+                                    r.notes.toLowerCase().includes(state.search) ||
+                                    r.area.toLowerCase().includes(state.search) ||
+                                    r.address.toLowerCase().includes(state.search);
                 const priceMatch = state.price === 'All' || r.price === state.price;
                 const resMatch = state.reservation === 'All' || r.res === state.reservation;
                 return cityMatch && searchMatch && priceMatch && resMatch;
