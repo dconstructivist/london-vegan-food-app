@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vegan Explorer: London & Brighton</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        :root {
+            --bg-primary: #fdfbf7;
+            --accent-sage: #8da399;
+            --accent-terracotta: #d68c71;
+            --text-main: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 280px;
+            max-height: 320px;
+        }
+
+        .glass-nav {
+            background: rgba(253, 251, 247, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(141, 163, 153, 0.15);
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(141, 163, 153, 0.15);
+        }
+
+        .tab-btn.active {
+            color: var(--text-main);
+            border-bottom: 2px solid var(--accent-terracotta);
+        }
+
+        .city-btn.active {
+            background-color: var(--accent-sage);
+            color: white;
+        }
+        
+        .hidden-tab {
+            display: none;
+        }
+
+        .btn-action {
+            background-color: var(--text-main);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .location-badge {
+            background-color: rgba(214, 140, 113, 0.1);
+            color: var(--accent-terracotta);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="glass-nav sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <h1 class="text-2xl font-bold tracking-tight">Vegan<span style="color: var(--accent-terracotta)">Explorer</span></h1>
+            
+            <div class="flex gap-8 text-sm font-bold text-gray-400 uppercase tracking-widest">
+                <button onclick="setView('discover')" id="tab-discover" class="tab-btn active pb-1">Discover</button>
+                <button onclick="setView('insights')" id="tab-insights" class="tab-btn pb-1">Insights</button>
+            </div>
+
+            <div class="flex gap-2 p-1 bg-gray-100 rounded-full">
+                <button onclick="setCity('All')" id="city-all" class="city-btn active px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">All</button>
+                <button onclick="setCity('London')" id="city-london" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">London</button>
+                <button onclick="setCity('Brighton')" id="city-brighton" class="city-btn px-4 py-1.5 rounded-full text-xs font-bold uppercase transition">Brighton</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        
+        <div id="view-discover">
+            <header class="mb-10 flex flex-col md:flex-row justify-between items-end gap-6">
+                <div>
+                    <h2 class="text-3xl font-black mb-2">Live Directory</h2>
+                    <p class="text-gray-500 max-w-xl">Explore 39 verified locations. Use location services to see what's right around the corner.</p>
+                </div>
+                <button onclick="toggleLocation()" id="locationBtn" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-gray-200 text-xs font-bold uppercase tracking-widest shadow-sm hover:bg-gray-50 transition">
+                    <span id="locIcon">📍</span> <span id="locText">Enable Proximity Sorting</span>
+                </button>
+            </header>
+
+            <section class="mb-10 flex flex-col md:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <input type="text" id="searchInput" placeholder="Search cuisine, area, or name..." 
+                           class="w-full pl-12 pr-4 py-4 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-sage-400 outline-none transition bg-white shadow-sm"
+                           oninput="handleFilterChange()">
+                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                </div>
+                <div class="flex gap-3 overflow-x-auto">
+                    <select id="priceFilter" onchange="handleFilterChange()" class="px-6 py-4 rounded-2xl border-none ring-1 ring-gray-200 text-sm font-bold bg-white shadow-sm">
+                        <option value="All">All Budgets</option>
+                        <option value="$">$</option>
+                        <option value="$$">$$</option>
+                        <option value="$$$">$$$</option>
+                        <option value="$$$$">$$$$</option>
+                    </select>
+                    <select id="resFilter" onchange="handleFilterChange()" class="px-6 py-4 rounded-2xl border-none ring-1 ring-gray-200 text-sm font-bold bg-white shadow-sm">
+                        <option value="All">All Booking Types</option>
+                        <option value="Yes">Reservations Needed</option>
+                        <option value="No">Walk-ins Friendly</option>
+                    </select>
+                </div>
+            </section>
+
+            <div id="restaurantGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </div>
+
+        <div id="view-insights" class="hidden-tab">
+            <header class="mb-12">
+                <h2 class="text-3xl font-black mb-2">Market Insights</h2>
+                <p class="text-gray-500">Visualizing the vegan landscape across your travel destinations.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <div class="bg-white rounded-[2rem] p-10 border border-gray-100 shadow-sm">
+                    <h3 class="font-bold mb-8 flex items-center justify-between">
+                        Price Distribution 
+                        <span class="text-[10px] text-gray-400 uppercase tracking-tighter">Total Market Share</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-[2rem] p-10 border border-gray-100 shadow-sm">
+                    <h3 class="font-bold mb-8 flex items-center justify-between">
+                        Average Ratings by City
+                        <span class="text-[10px] text-gray-400 uppercase tracking-tighter">Verified Google Data</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="ratingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-stone-800 rounded-[2rem] p-10 text-white">
+                <div class="max-w-2xl">
+                    <h3 class="text-2xl font-bold mb-4">Summary Statistics</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        <div>
+                            <p class="text-stone-500 text-[10px] uppercase font-bold mb-1">Total Spots</p>
+                            <p class="text-3xl font-black" id="stat-total">39</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-500 text-[10px] uppercase font-bold mb-1">Avg Rating</p>
+                            <p class="text-3xl font-black" id="stat-rating">4.6</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-500 text-[10px] uppercase font-bold mb-1">Walk-in Friendly</p>
+                            <p class="text-3xl font-black" id="stat-walkin">23</p>
+                        </div>
+                        <div>
+                            <p class="text-stone-500 text-[10px] uppercase font-bold mb-1">Fine Dining</p>
+                            <p class="text-3xl font-black" id="stat-fine">3</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const restaurants = [
+            { name: "Club Mexicana", city: "London", area: "Shoreditch", address: "Boxpark Shoreditch, E1 6GY", notes: "Vibrant Mexican street food. Famous for 'Cheezeburger' tacos.", price: "$", res: "No", rating: 4.6, lat: 51.5235, lng: -0.0758 },
+            { name: "Dauns", city: "London", area: "Spitalfields", address: "77 Wentworth Street, E1 7TD", notes: "Unbelievable vegan Swedish meatballs and fresh cinnamon buns.", price: "$$", res: "No", rating: 4.9, lat: 51.5173, lng: -0.0728 },
+            { name: "Gecko Coffeehouse", city: "London", area: "Bethnal Green", address: "49 Bethnal Green Road, E1 6LA", notes: "Superb specialty lattes and protein pancakes.", price: "$$", res: "No", rating: 4.8, lat: 51.5237, lng: -0.0722 },
+            { name: "Holy Carrot", city: "London", area: "Spitalfields", address: "61-63 Brushfield Street, E1 6AA", notes: "Chic bistro. Incredible pizzettas with fermented koji base.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5195, lng: -0.0772 },
+            { name: "King CookDaily", city: "London", area: "Liverpool Street", address: "Boxhall, EC2M 7PN", notes: "Iconic plant-based bowls. The 'High Grade' is legendary.", price: "$$", res: "No", rating: 4.5, lat: 51.5178, lng: -0.0820 },
+            { name: "Love Shack", city: "London", area: "Bethnal Green", address: "298 Cambridge Heath Rd, E2 9HA", notes: "Quirky railway-arch cafe. Amazing mushroom risotto.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5303, lng: -0.0573 },
+            { name: "Mallow", city: "London", area: "Borough Market", address: "1 Cathedral Street, SE1 9DE", notes: "Beautiful globally inspired dishes next to the historic market.", price: "$$$", res: "Yes", rating: 4.5, lat: 51.5061, lng: -0.0908 },
+            { name: "Meat The Vegans", city: "London", area: "Camden", address: "Camden Stables Market, NW1 8AH", notes: "Global menu featuring curries, burritos, and jerk chicken.", price: "$$", res: "No", rating: 4.8, lat: 51.5414, lng: -0.1456 },
+            { name: "Merkamo Vegan", city: "London", area: "Spitalfields Market", address: "Old Spitalfields Market, E1 6EW", notes: "Incredible Ethiopian variety boxes with injera bread.", price: "$", res: "No", rating: 4.7, lat: 51.5198, lng: -0.0759 },
+            { name: "Mildreds", city: "London", area: "Soho", address: "45 Lexington Street, W1F 9AN", notes: "The landmark pioneer of London's meat-free scene.", price: "$$", res: "Yes", rating: 4.5, lat: 51.5126, lng: -0.1377 },
+            { name: "MukBap", city: "London", area: "Shoreditch", address: "91 Worship St, EC2A 2BG", notes: "Family-run Korean. Phenomenal Tteokbokki and pancakes.", price: "$$", res: "No", rating: 4.7, lat: 51.5208, lng: -0.0827 },
+            { name: "Okja", city: "London", area: "Spitalfields", address: "29 Toynbee Street, E1 7NE", notes: "Bakes everything on-site with custom plant butter.", price: "$$", res: "No", rating: 4.6, lat: 51.5175, lng: -0.0732 },
+            { name: "Oliveira Kitchen", city: "London", area: "Shoreditch", address: "80 Paul St, EC2A 4NE", notes: "Elegant, organic dishes. Famous wild mushroom faux gras.", price: "$$$", res: "Yes", rating: 4.7, lat: 51.5244, lng: -0.0844 },
+            { name: "Palm Greens & Soul", city: "London", area: "Shoreditch", address: "114 Cheshire St, E2 6EJ", notes: "Nutrient-dense salad bowls inside a co-working space.", price: "$$", res: "No", rating: 4.5, lat: 51.5248, lng: -0.0682 },
+            { name: "Plant Shack", city: "London", area: "Shoreditch", address: "52 Great Eastern St, EC2A 3EP", notes: "Great specialty coffee and energy bowls.", price: "$$", res: "No", rating: 4.8, lat: 51.5255, lng: -0.0818 },
+            { name: "Plates", city: "London", area: "Shoreditch", address: "320 Old Street, EC1V 9DR", notes: "12-course Chef's Counter. Completely organic.", price: "$$$$", res: "Yes", rating: 4.8, lat: 51.5268, lng: -0.0850 },
+            { name: "Purezza Camden", city: "London", area: "Camden", address: "45-47 Parkway, NW1 7PN", notes: "Award-winning sourdough. Huge space and dog friendly.", price: "$$$", res: "Yes", rating: 4.8, lat: 51.5379, lng: -0.1448 },
+            { name: "Rawlala", city: "London", area: "Shoreditch", address: "11 Hackney Road, E2 7NX", notes: "Organic, GF, raw cakes and acai bowls.", price: "$$", res: "No", rating: 4.5, lat: 51.5268, lng: -0.0768 },
+            { name: "Sen Viet Vegan", city: "London", area: "Haggerston", address: "120 Kingsland Rd, E2 8DP", notes: "Highly authentic 100% vegan Pho and claypots.", price: "$$", res: "No", rating: 4.8, lat: 51.5323, lng: -0.0762 },
+            { name: "Temple of Seitan", city: "London", area: "Hackney", address: "10 Westgate Street, E8 3RN", notes: "Legendary seitan-based fried chicken and wings.", price: "$", res: "No", rating: 4.4, lat: 51.5393, lng: -0.0594 },
+            { name: "The Gallery Café", city: "London", area: "Bethnal Green", address: "21 Old Ford Road, E2 9PL", notes: "Charity-run with a beautiful peaceful garden space.", price: "$$", res: "No", rating: 4.5, lat: 51.5285, lng: -0.0550 },
+            { name: "The Spread Eagle", city: "London", area: "Homerton", address: "224 Homerton High Street, E9 6AS", notes: "London’s first 100% vegan pub. Famous roasts.", price: "$$", res: "Yes", rating: 4.7, lat: 51.5471, lng: -0.0402 },
+            { name: "The Veg Box Cafe", city: "London", area: "Marylebone", address: "136 Marylebone Road, NW1 5PH", notes: "Local farm sourcing and fluffy pancakes.", price: "$$", res: "Yes", rating: 4.9, lat: 51.5225, lng: -0.1558 },
+            { name: "Tofu Vegan", city: "London", area: "Spitalfields", address: "54 Commercial Street, E1 6LT", notes: "Masterful Sichuan Chinese mushroom dishes.", price: "$$", res: "Yes", rating: 4.8, lat: 51.5175, lng: -0.0732 },
+            { name: "Unity Diner", city: "London", area: "Spitalfields", address: "60 Wentworth Street, E1 7AL", notes: "Founded by Earthling Ed. Famous Tofish and chips.", price: "$$", res: "Yes", rating: 4.6, lat: 51.5173, lng: -0.0732 },
+            { name: "Vegan Yes", city: "London", area: "Shoreditch", address: "64 Brick Lane, E1 6RF", notes: "Unique Italian-Korean fusion. Try the kimchi lasagna.", price: "$$", res: "No", rating: 4.8, lat: 51.5204, lng: -0.0718 },
+            { name: "WAVE", city: "London", area: "Hackney", address: "11 Dispensary Lane, E8 1FT", notes: "Bali-Beach vibe with hanging swing chairs.", price: "$$", res: "No", rating: 4.6, lat: 51.5484, lng: -0.0544 },
+            { name: "Abyssinia", city: "Brighton", area: "North Laine", address: "29 Baker St, BN1 4JN", notes: "Hearty Ethiopian sharing platters. Cash only.", price: "$", res: "Yes", rating: 4.7, lat: 50.8305, lng: -0.1365 },
+            { name: "Beelzebab", city: "Brighton", area: "North Laine", address: "11-12 Queens Road, BN1 3WA", notes: "Inside Hope & Ruin pub. PB&J fries are legendary.", price: "$", res: "No", rating: 4.6, lat: 50.8262, lng: -0.1420 },
+            { name: "Bonsai", city: "Brighton", area: "North Laine", address: "44-45 Baker Street, BN1 4JN", notes: "Modern Asian small plates cooked on charcoal grill.", price: "$$$$", res: "Yes", rating: 4.9, lat: 50.8306, lng: -0.1362 },
+            { name: "Green Kitchen", city: "Brighton", area: "Brighton", address: "8 Preston Road, BN1 4BF", notes: "Incredible homemade bacon and seitan steaks.", price: "$", res: "No", rating: 4.7, lat: 50.8344, lng: -0.1388 },
+            { name: "Iydea", city: "Brighton", area: "North Laine", address: "17 Kensington Gardens, BN1 4AL", notes: "Healthy build-your-own plates. Great value.", price: "$", res: "No", rating: 4.6, lat: 50.8265, lng: -0.1396 },
+            { name: "No Catch", city: "Brighton", area: "Seafront", address: "127a King’s Road, BN1 2FA", notes: "Premium 100% vegan fish and chip shop.", price: "$$$", res: "No", rating: 4.7, lat: 50.8213, lng: -0.1442 },
+            { name: "Oowee", city: "Brighton", area: "The Lanes", address: "23 Market Street, BN1 1HH", notes: "Best vegan chicken and mac n cheese in town.", price: "$$", res: "No", rating: 4.5, lat: 50.8215, lng: -0.1402 },
+            { name: "Planet India", city: "Brighton", area: "Brighton", address: "4 Richmond Parade, BN2 9PH", notes: "Authentic, family-run Indian. Uniquely written menu.", price: "$$", res: "Yes", rating: 4.7, lat: 50.8285, lng: -0.1345 },
+            { name: "Purezza Brighton", city: "Brighton", area: "Kemptown", address: "12 St James's St, BN2 1RE", notes: "World-class sourdough pizza. Highly popular.", price: "$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1352 },
+            { name: "Terre a Terre", city: "Brighton", area: "The Lanes", address: "71 East Street, BN1 1HQ", notes: "Iconic high-end vegetarian sharing plates.", price: "$$$$", res: "Yes", rating: 4.6, lat: 50.8208, lng: -0.1398 },
+            { name: "The Roundhill", city: "Brighton", area: "Brighton", address: "100 Ditchling Road, BN1 4SG", notes: "Award-winning roasts in a spacious pub setting.", price: "$$$", res: "Yes", rating: 4.7, lat: 50.8354, lng: -0.1332 }
+        ];
+
+        let state = {
+            view: 'discover',
+            city: 'All',
+            search: '',
+            price: 'All',
+            reservation: 'All',
+            userCoords: null,
+            locationActive: false
+        };
+
+        let charts = { price: null, rating: null };
+
+        function init() {
+            renderGrid();
+            updateStats();
+        }
+
+        function setView(view) {
+            state.view = view;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${view}`).classList.add('active');
+            
+            if(view === 'discover') {
+                document.getElementById('view-discover').classList.remove('hidden-tab');
+                document.getElementById('view-insights').classList.add('hidden-tab');
+            } else {
+                document.getElementById('view-discover').classList.add('hidden-tab');
+                document.getElementById('view-insights').classList.remove('hidden-tab');
+                renderCharts();
+            }
+        }
+
+        function setCity(city) {
+            state.city = city;
+            document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`city-${city.toLowerCase()}`).classList.add('active');
+            handleFilterChange();
+        }
+
+        function handleFilterChange() {
+            state.search = document.getElementById('searchInput').value.toLowerCase();
+            state.price = document.getElementById('priceFilter').value;
+            state.reservation = document.getElementById('resFilter').value;
+            renderGrid();
+            if(state.view === 'insights') renderCharts();
+        }
+
+        function toggleLocation() {
+            if (!state.locationActive) {
+                // FALLBACK CHECK: Browsers block location on local files (file://) or insecure sites.
+                if (!window.isSecureContext && window.location.protocol !== 'file:') {
+                    alert("Location access requires a secure (HTTPS) connection. If you are using a local file, Chrome might block this for security.");
+                }
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        state.userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        state.locationActive = true;
+                        document.getElementById('locText').innerText = "Proximity Sort Active";
+                        document.getElementById('locationBtn').classList.add('bg-emerald-50', 'border-emerald-200');
+                        renderGrid();
+                    }, err => {
+                        let msg = "Location access denied. ";
+                        if(window.location.protocol === 'file:') {
+                            msg += "\n\nTip: You are opening this as a local file. Chrome often blocks location for local files. Try clicking the 'lock' or 'info' icon in the address bar and set Location to 'Allow'.";
+                        }
+                        alert(msg);
+                    });
+                }
+            } else {
+                state.locationActive = false;
+                state.userCoords = null;
+                document.getElementById('locText').innerText = "Enable Proximity Sorting";
+                document.getElementById('locationBtn').classList.remove('bg-emerald-50', 'border-emerald-200');
+                renderGrid();
+            }
+        }
+
+        function calcDist(lat1, lon1, lat2, lon2) {
+            const R = 6371; // km
+            const dLat = (lat2-lat1) * Math.PI / 180;
+            const dLon = (lon2-lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('restaurantGrid');
+            let data = restaurants.filter(r => {
+                const cityMatch = state.city === 'All' || r.city === state.city;
+                const searchMatch = r.name.toLowerCase().includes(state.search) || r.notes.toLowerCase().includes(state.search);
+                const priceMatch = state.price === 'All' || r.price === state.price;
+                const resMatch = state.reservation === 'All' || r.res === state.reservation;
+                return cityMatch && searchMatch && priceMatch && resMatch;
+            });
+
+            if (state.locationActive && state.userCoords) {
+                data.forEach(r => r.distance = calcDist(state.userCoords.lat, state.userCoords.lng, r.lat, r.lng));
+                data.sort((a, b) => a.distance - b.distance);
+            }
+
+            grid.innerHTML = data.map(r => {
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name + ' ' + r.address)}`;
+                const distMarkup = r.distance ? `<span class="location-badge px-3 py-1 rounded-full text-[10px] font-bold">📍 ${r.distance.toFixed(1)} km away</span>` : '';
+                
+                return `
+                <div class="bg-white rounded-[2rem] p-8 border border-gray-100 card-hover flex flex-col">
+                    <div class="flex justify-between items-start mb-6">
+                        <span class="px-3 py-1 bg-gray-50 rounded-full text-[10px] font-bold uppercase tracking-widest text-stone-400">${r.area}</span>
+                        ${distMarkup}
+                    </div>
+                    
+                    <h4 class="text-2xl font-bold text-stone-900 mb-2">${r.name}</h4>
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="text-xs font-bold text-amber-500">★ ${r.rating}</span>
+                        <span class="h-1 w-1 bg-gray-300 rounded-full"></span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">${r.price}</span>
+                    </div>
+                    
+                    <p class="text-sm text-stone-600 leading-relaxed mb-8 flex-grow">${r.notes}</p>
+                    
+                    <div class="space-y-4 pt-6 border-t border-gray-50">
+                        <div class="flex justify-between text-[10px] font-bold uppercase">
+                            <span class="text-gray-400">Booking</span>
+                            <span style="color: ${r.res === 'Yes' ? 'var(--accent-terracotta)' : '#059669'}">${r.res === 'Yes' ? 'Required' : 'Walk-in'}</span>
+                        </div>
+                        <a href="${mapUrl}" target="_blank" class="btn-action w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest">
+                            Open in Maps ↗
+                        </a>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderCharts() {
+            const data = state.city === 'All' ? restaurants : restaurants.filter(r => r.city === state.city);
+            const ctxP = document.getElementById('priceChart').getContext('2d');
+            const ctxR = document.getElementById('ratingChart').getContext('2d');
+
+            if(charts.price) charts.price.destroy();
+            if(charts.rating) charts.rating.destroy();
+
+            charts.price = new Chart(ctxP, {
+                type: 'doughnut',
+                data: {
+                    labels: ['$', '$$', '$$$', '$$$$'],
+                    datasets: [{
+                        data: ['$', '$$', '$$$', '$$$$'].map(p => data.filter(r => r.price === p).length),
+                        backgroundColor: ['#f5f5f4', '#8da399', '#d68c71', '#2d2d2d'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const cities = ['London', 'Brighton'];
+            charts.rating = new Chart(ctxR, {
+                type: 'bar',
+                data: {
+                    labels: cities,
+                    datasets: [{
+                        data: cities.map(c => (restaurants.filter(r => r.city === c).reduce((a, b) => a + b.rating, 0) / restaurants.filter(r => r.city === c).length).toFixed(2)),
+                        backgroundColor: '#8da399',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: { y: { min: 4, max: 5 }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').innerText = restaurants.length;
+            document.getElementById('stat-walkin').innerText = restaurants.filter(r => r.res === 'No').length;
+            document.getElementById('stat-fine').innerText = restaurants.filter(r => r.price === '$$$$').length;
+            document.getElementById('stat-rating').innerText = (restaurants.reduce((a, b) => a + b.rating, 0) / restaurants.length).toFixed(1);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
